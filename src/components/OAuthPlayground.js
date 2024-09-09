@@ -42,7 +42,7 @@ export default function OAuthPlayground() {
       <pre>{JSON.stringify(secrets, null, 1)}</pre>
       <h2>Step 1 - redir to auth uri</h2>
       <button
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
         onClick={async () => {
           const uri = await authorizeUri();
           setAuthUri(uri?.authUri || '');
@@ -50,7 +50,14 @@ export default function OAuthPlayground() {
       >
         Get auth URI
       </button>
-      {authUri !== '' ? <a href={authUri}>Redirect on auth uri</a> : null}
+      {authUri !== '' ? (
+        <a
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          href={authUri}
+        >
+          Redirect on auth uri
+        </a>
+      ) : null}
     </div>
   );
 }

@@ -26,6 +26,7 @@ async function authorizeUriCb({ code, state, realmId }) {
 
 export default function Redirect() {
   const [token, setToken] = useState({});
+  const [respJson, setRespJson] = useState({});
   const searchParams = useSearchParams();
 
   const code = searchParams.get('code');
@@ -36,10 +37,10 @@ export default function Redirect() {
       <h1>Redirection callback</h1>
       <p>redirected</p>
       <pre>
-        {code}, {state}, {realmId}
+        code: {code}, state: {state}, realmId: {realmId}
       </pre>
       <button
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
         onClick={async () => {
           const resp = await authorizeUriCb({
             code,
@@ -61,7 +62,34 @@ export default function Redirect() {
         Callback for token
       </button>
       <pre>{JSON.stringify(token, null, 1)}</pre>
-      <a href="/">home</a>
+      <div>
+        <a
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          href="/"
+        >
+          home
+        </a>
+      </div>
+      <div className="py-2">
+        <a
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          onClick={async () => {
+            if (realmId?.length || 0 > 0) {
+              const resp = await axios.post(`${baseUrl}/api/quickbooks/proxy`, {
+                db,
+                params: {
+                  url: `v3/company/${realmId}/companyinfo/${realmId}`,
+                  method: 'GET',
+                },
+              });
+              setRespJson(resp.data.json);
+            }
+          }}
+        >
+          Get company info
+        </a>
+      </div>
+      <pre>{JSON.stringify(respJson, null, 1)}</pre>
     </div>
   );
 }
