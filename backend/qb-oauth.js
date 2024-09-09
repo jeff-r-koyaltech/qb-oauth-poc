@@ -54,7 +54,7 @@ export const onAuthorizeCB = async (req, res, next) => {
         type: 'cached',
         token,
       });
-    } else if (token.realmId !== '' && isValid == false) {
+    } else if (token.access_token !== '' && isValid == false) {
       // needs a refresh
       await clientCache[userId].refresh();
       token = clientCache[userId].getToken();
@@ -67,11 +67,14 @@ export const onAuthorizeCB = async (req, res, next) => {
       // fetch a new starting token
       const urlParams = new URLSearchParams(req.url);
       // const companyId = urlParams.get('realmId');
-      urlParams.delete('db'); // remove our Timbersite-specific parameter(s)
-      const qbUrl = decodeURIComponent(urlParams.toString()).replace(
+      // urlParams.delete('db'); // remove our Timbersite-specific parameter(s)
+      const qbUrl = decodeURIComponent(urlParams.toString());
+      /*
+      .replace(
         '/api/quickbooks/authorize-uri-cb',
         '/redirect'
       );
+      */
       console.log({
         url: req.url,
         qbUrl,
@@ -101,10 +104,11 @@ export const getToken = async (req, res, next) => {
     if (clientCache[userId] == null) {
       throw new Error('No OAuth client context');
     }
-    const token = clientCache[userId].getToken();
-    if (token.length === 0) {
-      console.warn(`No token for user ${userId}`);
+    const isValid = clientCache[userId].isAccessTokenValid();
+    if (token?.access_token !== '' && isValid == false) {
+      await clientCache[userId].refresh();
     }
+    const token = clientCache[userId].getToken();
     /*
     Example:
     {
@@ -116,6 +120,7 @@ export const getToken = async (req, res, next) => {
     }
     */
     res.send({
+      isValid,
       token,
     });
   } catch (err) {
@@ -129,23 +134,23 @@ export const getToken = async (req, res, next) => {
   }
 };
 
-export const refreshToken = async (req, res, next) => {
-  // console.time('refreshToken');
-  const userId = defaultUserId;
-  try {
-    if (clientCache[userId] == null) {
-      throw new Error('No OAuth client context');
-    }
-    await clientCache[userId].refresh();
-    const token = clientCache[userId].getToken();
-    // console.timeEnd('refreshToken');
-    res.send({ status: 'success', token });
-  } catch (err) {
-    console.error(err?.message);
-    // console.timeEnd('refreshToken');
-    next(new Error('Unable to complete OAuth token refresh'));
-  }
-};
+// export const refreshToken = async (req, res, next) => {
+//   // console.time('refreshToken');
+//   const userId = defaultUserId;
+//   try {
+//     if (clientCache[userId] == null) {
+//       throw new Error('No OAuth client context');
+//     }
+//     await clientCache[userId].refresh();
+//     const token = clientCache[userId].getToken();
+//     // console.timeEnd('refreshToken');
+//     res.send({ status: 'success', token });
+//   } catch (err) {
+//     console.error(err?.message);
+//     // console.timeEnd('refreshToken');
+//     next(new Error('Unable to complete OAuth token refresh'));
+//   }
+// };
 
 // Quickbooks apparently only allows API calls from a backend where oauth client is
 export const proxyApiCall = async (req, res, next) => {
@@ -154,6 +159,10 @@ export const proxyApiCall = async (req, res, next) => {
   try {
     if (clientCache[userId] == null) {
       throw new Error('No OAuth client context');
+    }
+    const isValid = clientCache[userId].isAccessTokenValid();
+    if (isValid == false) {
+      await clientCache[userId].refresh();
     }
     const { params } = req.body;
     const baseUrl =

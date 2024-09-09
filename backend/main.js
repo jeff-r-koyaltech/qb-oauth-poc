@@ -7,7 +7,7 @@ import {
   getToken,
   onAuthorizeCB,
   proxyApiCall,
-  refreshToken,
+  // refreshToken,
 } from './qb-oauth.js';
 
 const app = express();
@@ -22,7 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get('/api/quickbooks/authorize-uri', authorizeUri);
 app.get('/api/quickbooks/authorize-uri-cb', onAuthorizeCB);
 app.get('/api/quickbooks/token', getToken);
-app.get('/api/quickbooks/refresh-token', refreshToken);
+// app.get('/api/quickbooks/refresh-token', refreshToken);
 app.post('/api/quickbooks/proxy', proxyApiCall);
 app.get('/api/quickbooks/disconnect-uri', disconnectUri);
 
