@@ -19,6 +19,7 @@ export const authorizeUri = async (req, res) => {
     clientSecret,
     environment,
     redirectUri,
+    logging: true,
   });
 
   const authUri = clientCache[userId].authorizeUri({
@@ -36,6 +37,7 @@ export const authorizeUri = async (req, res) => {
 };
 
 export const onAuthorizeCB = async (req, res, next) => {
+  console.log('AUTH CB!!!');
   // console.time('onAuthorizeCB');
   const userId = defaultUserId;
   // req.url example:
@@ -44,24 +46,44 @@ export const onAuthorizeCB = async (req, res, next) => {
     if (clientCache[userId] == null) {
       throw new Error('No OAuth client context');
     }
-    const urlParams = new URLSearchParams(req.url);
-    // const companyId = urlParams.get('realmId');
-    urlParams.delete('db'); // remove our Timbersite-specific parameter(s)
-    const qbUrl = decodeURIComponent(urlParams.toString()).replace(
-      '/api/quickbooks/authorize-uri-cb',
-      '/callback'
-    );
-    console.log({
-      url: req.url,
-      qbUrl,
-    });
-    // await clientCache[userId].refresh();
-    const authResponse = await clientCache[userId].createToken(qbUrl);
-    // console.timeEnd('onAuthorizeCB');
-    res.send({
-      status: 'success',
-      token: JSON.stringify(authResponse.json, null, 2),
-    });
+    const isValid = clientCache[userId].isAccessTokenValid();
+    let token = clientCache[userId].getToken();
+    if (isValid) {
+      res.send({
+        status: 'success',
+        type: 'cached',
+        token,
+      });
+    } else if (token.realmId !== '' && isValid == false) {
+      // needs a refresh
+      await clientCache[userId].refresh();
+      token = clientCache[userId].getToken();
+      res.send({
+        status: 'success',
+        type: 'refreshed',
+        token,
+      });
+    } else {
+      // fetch a new starting token
+      const urlParams = new URLSearchParams(req.url);
+      // const companyId = urlParams.get('realmId');
+      urlParams.delete('db'); // remove our Timbersite-specific parameter(s)
+      const qbUrl = decodeURIComponent(urlParams.toString()).replace(
+        '/api/quickbooks/authorize-uri-cb',
+        '/redirect'
+      );
+      console.log({
+        url: req.url,
+        qbUrl,
+      });
+      const authResponse = await clientCache[userId].createToken(qbUrl);
+      // console.timeEnd('onAuthorizeCB');
+      res.send({
+        status: 'success',
+        type: 'new',
+        token: authResponse.json,
+      });
+    }
   } catch (err) {
     console.error({
       message: err?.message || '',
